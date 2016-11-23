@@ -4,7 +4,6 @@ import urllib
 import glob
 import os
 import pickle
-
 from keras.models import Sequential
 from keras.layers.core import Dense, Activation, Dropout
 from keras.layers.recurrent import LSTM
@@ -60,35 +59,25 @@ def test():
         tmp=pysrt.open(srt)
         text += tmp.text
     return text.replace('\n', ' ')
-def gentext(text):
-    seed_text = text
-    generated = '' + seed_text
-    print('------'*5+'\nyou said: \n'+'"' + seed_text +'"')
-
-
-    print('------'*5+'\n generating...\n'+ '------'*5)
-    for iteration in range(50):
-        # create x vector from seed to predict off of
-        #x = np.zeros((1, len(seed_text), len(chars)))
-        x = np.zeros((1, maxlen, len(chars)))
-        for t, char in enumerate(seed_text):
-            x[0, t, char_indices[char]] = 1.
-
-        preds = model.predict(x, verbose=0)[0]
-        next_index = np.argmax(preds)
-        next_char = indices_char[next_index]
-
-        generated += next_char
-        seed_text = seed_text[1:] + next_char
-    print('\n\nfollow up with: ' + generated)
-
+def TrainingData():
+    if os.path.isfile(config_save): 
+        data = pickle.load( open( config_save, "rb" ) )
+        return data['t'],data['c'],data['ci'],data['ic']
+    return TrainingDataFromTXT()
+def TrainingDataFromTXT():
+    total_text=test()
+    chars = set(total_text)
+    char_indices = dict((c, i) for i, c in enumerate(chars))
+    indices_char = dict((i, c) for i, c in enumerate(chars))
+    pickle.dump({"t":total_text,"c":chars,"ci":char_indices,"ic":indices_char},open(config_save,"wb"))
+    return total_text,chars,char_indices,indices_char
 def SaveModel(model):
     print('Sauvegarde du modele')
     model_json = model.to_json()
     with open(config_save+".json", "w") as json_file:
         json_file.write(model_json)
     model.save_weights(config_save+".h5")
-
+    return model
 def TrainModel():
     if os.path.isfile(config_save+'.json'):
         print('Récupération du modele...') 
@@ -99,7 +88,6 @@ def TrainModel():
         loaded_model.load_weights(config_save+".h5")
         return loaded_model
     return TrainModel_Data()
-
 def TrainModel_Data():
 
     step = 1
@@ -121,7 +109,6 @@ def TrainModel_Data():
     print(X)
     #AI
     model = Sequential()
-    #model.add(LSTM(len(chars), 512, return_sequences=True))
     model.add(LSTM(len(chars), input_length=maxlen, input_dim=len(char_indices), return_sequences=True))
     model.add(Dropout(0.20))
     # use 20% dropout on all LSTM layers: http://arxiv.org/abs/1312.4569
@@ -137,32 +124,34 @@ def TrainModel_Data():
 
     model.add(Dense(len(chars)))
     model.add(Activation('softmax'))
-
-    # compile or load weights then compile depending
     model.compile(loss='categorical_crossentropy', optimizer='rmsprop')
 
     model.fit(X,y,nb_epoch=50)
     return SaveModel(model)
-
-txt_fol="Bonjour à toutes et à tous j'espère que"
-#"ouais d'accord mais c'est chez moi. Att"
-#"le ministère de la culture vous informe"
-maxlen = len(txt_fol)
-
-def TrainingData():
-    if os.path.isfile(config_save): 
-        data = pickle.load( open( config_save, "rb" ) )
-        return data['t'],data['c'],data['ci'],data['ic']
-    return TrainingDataFromTXT()
-
-def TrainingDataFromTXT():
-    total_text=test()
-    chars = set(total_text)
-    char_indices = dict((c, i) for i, c in enumerate(chars))
-    indices_char = dict((i, c) for i, c in enumerate(chars))
-    pickle.dump({"t":total_text,"c":chars,"ci":char_indices,"ic":indices_char},open(config_save,"wb"))
-    return total_text,chars,char_indices,indices_char
-
+def gentext(text):
+    seed_text = text
+    generated = '' + seed_text
+    print('------'*5+'\ndemande: \n'+'"' + seed_text +'"')
+    while len(seed_text)<maxlen:
+        seed_text=' '+seed_text
+    print('------'*5+'\n generation...\n'+ '------'*5)
+    for iteration in range(150):
+        x = np.zeros((1, maxlen, len(chars)))
+        for t, char in enumerate(seed_text):
+            x[0, t, char_indices[char]] = 1.
+        preds = model.predict(x, verbose=0)[0]
+        next_index = np.argmax(preds)
+        next_char = indices_char[next_index]
+        generated += next_char
+        seed_text = seed_text[1:] + next_char
+    print('\n\nphrase générée: ' + generated)
+maxlen = 39
+txt_fol="Bonjour"
+#txt_fol="vous"
+#txt_fol="vous pouvez"
+#txt_fol="le ministère de la culture vous informe"
+#txt_fol="Bonjour à toutes et à tous j'espère que"
+#txt_fol="ouais d'accord mais c'est chez moi. Att"
 total_text,chars,char_indices,indices_char = TrainingData()
 model=TrainModel()
 gentext(txt_fol)
