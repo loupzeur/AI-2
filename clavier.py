@@ -148,9 +148,9 @@ def gentext(text):
         seed_text = seed_text[1:]
     print('\n\nphrase générée: ' + generated)
 maxlen = 5
-#txt_fol="le ministère de la culture"
+txt_fol="le ministère de la culture"
 #txt_fol="Elle fait à peu près"
-txt_fol="On va lui faire des"
+#txt_fol="On va lui faire des"
 #txt_fol="Bonjour"
 #txt_fol="Bonjour à toutes et à"
 #txt_fol="ouais d'accord mais c'est chez"
